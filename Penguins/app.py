@@ -88,8 +88,8 @@ with ui.layout_columns():
             
     with ui.card(full_screen=True):
         ui.card_header("Seaborn Histogram")
-
-        palette = sns.color_palette("Set3")  # Choose a palette with 3 colors
+        
+        palette = sns.color_palette("bright")  # Use the "bright" palette
 
         @render.plot(alt="Seaborn Histogram")
         def seaborn_histogram():
