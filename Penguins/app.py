@@ -30,11 +30,27 @@ with ui.sidebar(open="open"):
     # Use ui.input_slider() to create a slider input for the number of Seaborn bins
     ui.input_slider("seaborn_bin_count", "Bin Count", 1, 100, 20)
 
+    # Add a horizontal line to sidebar
+    ui.hr()
+
     # Use ui.input_checkbox_group() to create a checkbox group input to filter the species
-    ui.input_checkbox_group("selected_species_list", "Penguin Species",  ["Adelie", "Gentoo", "Chinstrap"], selected=["Chinstrap"],
+    ui.input_checkbox_group(
+        "selected_species_list",
+        "Penguin Species",
+        ["Adelie", "Gentoo", "Chinstrap"],
+        selected=["Chinstrap"],
+        inline=True,
+                           )
+                            
+    # Use ui.input_checkbox_group() to create a checkbox group input to filter the islands
+    ui.input_checkbox_group(
+        "selected_islands_list",
+        "Islands",
+        penguins_df["island"].unique().tolist(),
+        selected=penguins_df["island"].unique().tolist(),
         inline=True,
     )
-
+    
     # Use ui.hr() to add a horizontal rule to the sidebar
     ui.hr()
     
@@ -82,9 +98,9 @@ with ui.layout_columns(col_widths=(5, 5)):
 
 
 ## Plotly Scatterplot
-with ui.layout_columns(col_widths=(5, 5)):
+with ui.layout_columns(col_widths=(5, 10)):
     with ui.card(full_screen=True):
-        ui.card_header("Plotly Scatterplot")
+        ui.card_header("Scatterplot")
         @render_plotly
         def plotly_scatterplot():
             return px.scatter(penguins_df, x="bill_length_mm",
@@ -95,6 +111,26 @@ with ui.layout_columns(col_widths=(5, 5)):
                                   "body_mass_g": "Body Mass g"},
                           size_max=20,)
 
+# Create Boxplot showing species and islands
+with ui.layout_columns():
+    with ui.card(full_screen=True):
+        ui.card_header("Boxplot")
+        @render_plotly
+        def plotly_boxplot():
+            return px.box(
+                penguins_df,
+                x="species",
+                y=input.selected_attribute(),
+                color="island",  # Add a color parameter to differentiate boxplots by island
+                title="Penguins Boxplot",
+                labels={
+                    "species": "Species",
+                    input.selected_attribute(): input.selected_attribute()
+                    .replace("_", " ")
+                    .title(),
+                },
+            )
+
 
 # --------------------------------------------------------
 # Reactive calculations and effects
@@ -102,9 +138,12 @@ with ui.layout_columns(col_widths=(5, 5)):
 
 # Add a reactive calculation to filter the data
 # By decorating the function with @reactive, we can use the function to filter the data
-# The function will be called whenever an input functions used to generate that output changes.
+# The function will be called whenever an input function used to generate that output changes.
 # Any output that depends on the reactive function (e.g., filtered_data()) will be updated when the data changes.
 
 @reactive.calc
 def filtered_data():
-    return penguins_df
+    return penguins_df[
+        (penguins_df["species"].isin(input.selected_species_list()))
+        & (penguins_df["island"].isin(input.selected_islands()))
+    ]
