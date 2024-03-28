@@ -5,6 +5,8 @@ import palmerpenguins  # This package provides the Palmer Penguins dataset
 import pandas as pd
 import seaborn as sns
 from shiny import reactive, render, req
+import matplotlib.pyplot as plt
+
 
 # Use the built-in function to load the Palmer Penguins dataset.
 penguins_df = palmerpenguins.load_penguins()
@@ -40,18 +42,18 @@ with ui.sidebar(open="open"):
         ["Adelie", "Gentoo", "Chinstrap"],
         selected=["Chinstrap"],
         inline=True,
-                           )
+    )
                             
     # Use ui.input_checkbox_group() to create a checkbox group input to filter the islands
     ui.input_checkbox_group(
         "selected_islands_list",
-        "Islands",
-        penguins_df["island"].unique().tolist(),
-        selected=penguins_df["island"].unique().tolist(),
+        "Penguin Islands",
+        ["Torgersen", "Biscoe", "Dream"],
+        selected=["Torgersen"],
         inline=True,
     )
-    
-    # Use ui.hr() to add a horizontal rule to the sidebar
+
+    # Add a horizontal line to sidebar
     ui.hr()
     
     # Use ui.a() to add a hyperlink to the sidebar
@@ -61,13 +63,13 @@ with ui.sidebar(open="open"):
 # Create tables and plots displaying all data
 ## Data Table and Grid
 with ui.layout_columns():  
-    with ui.card(full_screen=False):  
+    with ui.card():  
         ui.h2("Penguins Table")        
         @render.data_frame
         def Penguins_Table():
                 return render.DataTable(penguins_df)
                     
-    with ui.card(full_screen=False):
+    with ui.card():
         ui.h2("Penguins Grid")
         
         @render.data_frame
@@ -76,60 +78,49 @@ with ui.layout_columns():
 
 # Create Histograms and Scatterplot
 
-with ui.layout_columns(col_widths=(5, 5)):
-    with ui.card(full_screen=True):
+with ui.layout_columns():
+    with ui.card():
         ui.h4("Penguin Histogram")
 
         @render_plotly
         def plotly_histogram():
             return px.histogram(penguins_df, x="species", color="species")
-
-
-with ui.layout_columns(col_widths=(5, 5)):
+            
     with ui.card(full_screen=True):
         ui.card_header("Seaborn Histogram")
+
+        palette = sns.color_palette("Set3")  # Choose a palette with 3 colors
+
         @render.plot(alt="Seaborn Histogram")
         def seaborn_histogram():
-            histplot = sns.histplot(data=penguins_df, x="body_mass_g", bins=input.seaborn_bin_count())
+            histplot = sns.histplot(
+                filtered_data(),
+                x="body_mass_g",
+                bins=input.seaborn_bin_count(),
+                hue="species",
+                palette=palette,
+            )
             histplot.set_title("Penguins")
-            histplot.set_xlabel("Mass")
-            histplot.set_ylabel("Count")
+            histplot.set_xlabel("Body Mass (g)")  # Set x-axis label
+            histplot.set_ylabel("Count")  # Set y-axis label
             return histplot
-
-
+        
+ 
 ## Plotly Scatterplot
-with ui.layout_columns(col_widths=(5, 10)):
-    with ui.card(full_screen=True):
-        ui.card_header("Scatterplot")
+    with ui.card():
+        ui.card_header()
         @render_plotly
         def plotly_scatterplot():
-            return px.scatter(penguins_df, x="bill_length_mm",
+            return px.scatter(filtered_data(),
+                          x="bill_length_mm",
                           y="body_mass_g",
                           color="species",
                           title="Penguin Scatterplot",
                           labels={"bill_length_mm": "Bill Length mm",
                                   "body_mass_g": "Body Mass g"},
-                          size_max=20,)
-
-# Create Boxplot showing species and islands
-with ui.layout_columns():
-    with ui.card(full_screen=True):
-        ui.card_header("Boxplot")
-        @render_plotly
-        def plotly_boxplot():
-            return px.box(
-                penguins_df,
-                x="species",
-                y=input.selected_attribute(),
-                color="island",  # Add a color parameter to differentiate boxplots by island
-                title="Penguins Boxplot",
-                labels={
-                    "species": "Species",
-                    input.selected_attribute(): input.selected_attribute()
-                    .replace("_", " ")
-                    .title(),
-                },
+                          size_max=20,
             )
+            
 
 
 # --------------------------------------------------------
@@ -143,7 +134,4 @@ with ui.layout_columns():
 
 @reactive.calc
 def filtered_data():
-    return penguins_df[
-        (penguins_df["species"].isin(input.selected_species_list()))
-        & (penguins_df["island"].isin(input.selected_islands()))
-    ]
+    return penguins_df[penguins_df["species"].isin(input.selected_species_list())]
