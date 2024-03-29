@@ -35,6 +35,15 @@ with ui.sidebar(open="open"):
         inline=True,
     )
 
+    # Use ui.input_checkbox_group() to create a checkbox group input to filter the islands
+    ui.input_checkbox_group(
+        "selected_islands_list",
+        "Penguin Islands",
+        ["Torgersen", "Biscoe", "Dream"],
+        selected=["Torgersen"],
+        inline=True,
+    )
+
     # Use ui.hr() to add a horizontal rule to the sidebar
     ui.hr()
     
