@@ -5,6 +5,8 @@ import palmerpenguins  # This package provides the Palmer Penguins dataset
 import pandas as pd
 import seaborn as sns
 from shiny import reactive, render, req
+import matplotlib.pyplot as plt
+
 
 # Use the built-in function to load the Palmer Penguins dataset.
 penguins_df = palmerpenguins.load_penguins()
@@ -30,8 +32,15 @@ with ui.sidebar(open="open"):
     # Use ui.input_slider() to create a slider input for the number of Seaborn bins
     ui.input_slider("seaborn_bin_count", "Bin Count", 1, 100, 20)
 
+    # Add a horizontal line to sidebar
+    ui.hr()
+
     # Use ui.input_checkbox_group() to create a checkbox group input to filter the species
-    ui.input_checkbox_group("selected_species_list", "Penguin Species",  ["Adelie", "Gentoo", "Chinstrap"], selected=["Chinstrap"],
+    ui.input_checkbox_group(
+        "selected_species_list",
+        "Penguin Species",
+        ["Adelie", "Gentoo", "Chinstrap"],
+        selected=["Chinstrap"],
         inline=True,
     )
 
@@ -54,13 +63,13 @@ with ui.sidebar(open="open"):
 # Create tables and plots displaying all data
 ## Data Table and Grid
 with ui.layout_columns():  
-    with ui.card(full_screen=False):  
+    with ui.card():  
         ui.h2("Penguins Table")        
         @render.data_frame
         def Penguins_Table():
                 return render.DataTable(penguins_df)
                     
-    with ui.card(full_screen=False):
+    with ui.card():
         ui.h2("Penguins Grid")
         
         @render.data_frame
@@ -69,40 +78,49 @@ with ui.layout_columns():
 
 # Create Histograms and Scatterplot
 
-with ui.layout_columns(col_widths=(5, 5)):
-    with ui.card(full_screen=True):
+with ui.layout_columns():
+    with ui.card():
         ui.h4("Penguin Histogram")
 
         @render_plotly
         def plotly_histogram():
             return px.histogram(penguins_df, x="species", color="species")
-
-
-with ui.layout_columns(col_widths=(5, 5)):
+            
     with ui.card(full_screen=True):
         ui.card_header("Seaborn Histogram")
+        
+        palette = sns.color_palette("bright")  # Use the "bright" palette
+
         @render.plot(alt="Seaborn Histogram")
         def seaborn_histogram():
-            histplot = sns.histplot(data=penguins_df, x="body_mass_g", bins=input.seaborn_bin_count())
+            histplot = sns.histplot(
+                filtered_data(),
+                x="body_mass_g",
+                bins=input.seaborn_bin_count(),
+                hue="species",
+                palette=palette,
+            )
             histplot.set_title("Penguins")
-            histplot.set_xlabel("Mass")
-            histplot.set_ylabel("Count")
+            histplot.set_xlabel("Body Mass (g)")  # Set x-axis label
+            histplot.set_ylabel("Count")  # Set y-axis label
             return histplot
-
-
+        
+ 
 ## Plotly Scatterplot
-with ui.layout_columns(col_widths=(5, 5)):
-    with ui.card(full_screen=True):
-        ui.card_header("Plotly Scatterplot")
+    with ui.card():
+        ui.card_header()
         @render_plotly
         def plotly_scatterplot():
-            return px.scatter(penguins_df, x="bill_length_mm",
+            return px.scatter(filtered_data(),
+                          x="bill_length_mm",
                           y="body_mass_g",
                           color="species",
                           title="Penguin Scatterplot",
                           labels={"bill_length_mm": "Bill Length mm",
                                   "body_mass_g": "Body Mass g"},
-                          size_max=20,)
+                          size_max=20,
+            )
+            
 
 
 # --------------------------------------------------------
@@ -111,9 +129,9 @@ with ui.layout_columns(col_widths=(5, 5)):
 
 # Add a reactive calculation to filter the data
 # By decorating the function with @reactive, we can use the function to filter the data
-# The function will be called whenever an input functions used to generate that output changes.
+# The function will be called whenever an input function used to generate that output changes.
 # Any output that depends on the reactive function (e.g., filtered_data()) will be updated when the data changes.
 
 @reactive.calc
 def filtered_data():
-    return penguins_df
+    return penguins_df[penguins_df["species"].isin(input.selected_species_list())]
